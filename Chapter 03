@@ -1,0 +1,108 @@
+# Chapter 3 – f-strings and format method
+name = "Alice"
+age  = 30
+msg  = f"Hello, {name}. You are {age} years old."
+print(msg)
+
+width  = 8
+height = 5
+print(f"Area: {width * height} sq meters.")
+
+pi = 3.14159265
+print(f"Pi to 2 dp: {pi:.2f}")
+
+price = 1_234.567
+print(f"Price: ${price:,.2f}")
+
+# format() method
+msg2 = "Hello, {}. You are {} years old.".format(name, age)
+print(msg2)
+
+# Chapter 3 – Multiline strings and escape characters
+poem = """Roses are red,
+Violets are blue,
+Python is great,
+And so are you."""
+print(poem)
+
+print("Line one\nLine two\nLine three")
+print("Name\tAge\tCity")
+print("Alice\t30\tLondon")
+
+path = r"C:\Users\Alice\Documents"
+print(path)
+
+# Chapter 3 – String indexing and slicing
+language = "Python"
+print(language[0])
+print(language[2])
+print(language[5])
+print(language[-1])
+print(language[-2])
+print(len(language))
+
+print(language[0:3])
+print(language[2:5])
+print(language[:3])
+print(language[3:])
+print(language[:])
+
+alphabet = "abcdefghij"
+print(alphabet[0:10:2])   # every other character
+
+word = "Python"
+print(word[::-1])          # reverse
+
+# Chapter 3 – Essential string methods
+text = "hello, World!"
+print(text.upper())
+print(text.lower())
+print(text.title())
+print(text.capitalize())
+
+raw_input = "   Hello, World!   "
+print(repr(raw_input.strip()))
+print(repr(raw_input.lstrip()))
+print(repr(raw_input.rstrip()))
+
+sentence = "The quick brown fox"
+print(sentence.find("quick"))
+print(sentence.find("slow"))
+
+message     = "I love cats. Cats are great. My cat is huge."
+new_message = message.replace("cat", "dog")
+print(new_message)
+
+csv_line = "Alice,30,Engineer,London"
+parts    = csv_line.split(",")
+print(parts)
+
+words    = ["The", "quick", "brown", "fox"]
+sentence = " ".join(words)
+print(sentence)
+
+print("12345".isdigit())
+print("hello".isalpha())
+print("hello123".isalnum())
+print("   ".isspace())
+
+filename = "report_2026.pdf"
+print(filename.endswith(".pdf"))
+print(filename.startswith("report"))
+
+# Chapter 3 – Concatenation, repetition, membership
+first_name = "Alice"
+last_name  = "Smith"
+full_name  = first_name + " " + last_name
+print(full_name)
+
+separator = "-" * 30
+print(separator)
+
+echo = "Ha" * 5
+print(echo)
+
+sentence = "The quick brown fox"
+print("quick" in sentence)
+print("slow"  in sentence)
+print("slow" not in sentence)
