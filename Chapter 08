@@ -1,0 +1,116 @@
+# Chapter 8 – Combining dicts, lists, sets
+# List of dictionaries
+students = [
+    {"name": "Alice",  "grade": 92, "subject": "Math"},
+    {"name": "Bob",    "grade": 78, "subject": "Science"},
+    {"name": "Carlos", "grade": 85, "subject": "Math"},
+    {"name": "Diana",  "grade": 91, "subject": "Science"},
+    {"name": "Eve",    "grade": 67, "subject": "Math"},
+]
+
+math_grades  = [s["grade"] for s in students if s["subject"] == "Math"]
+print(f"Math grades: {math_grades}")
+print(f"Math average: {sum(math_grades) / len(math_grades):.1f}")
+
+top_students = [s["name"] for s in students if s["grade"] >= 90]
+print(f"Top students: {top_students}")
+
+# Dictionary of lists (grouping)
+grouped = {}
+for student in students:
+    subject = student["subject"]
+    name    = student["name"]
+    if subject not in grouped:
+        grouped[subject] = []
+    grouped[subject].append(name)
+for subject, names in grouped.items():
+    print(f"{subject}: {', '.join(names)}")
+
+# Chapter 8 – Creating and accessing dictionaries
+person = {
+    "name":  "Alice",
+    "age":   30,
+    "city":  "London",
+    "score": 95.5
+}
+print(person["name"])
+print(person["age"])
+print(person.get("email"))
+print(person.get("email", "Not provided"))
+print("name"  in person)
+print("email" in person)
+
+# Chapter 8 – Iterating and building dictionaries
+person = {"name": "Alice", "age": 30, "city": "London"}
+
+for key in person:
+    print(key)
+
+for value in person.values():
+    print(value)
+
+for key, value in person.items():
+    print(f"{key}: {value}")
+
+# Word frequency counter
+text     = "the cat sat on the mat the cat was fat"
+words    = text.split()
+frequency = {}
+for word in words:
+    if word in frequency:
+        frequency[word] += 1
+    else:
+        frequency[word] = 1
+for word, count in frequency.items():
+    print(f"'{word}': {count}")
+
+# Dictionary comprehension
+squares = {n: n ** 2 for n in range(1, 8)}
+print(squares)
+
+# Chapter 8 – Adding, updating, removing entries
+person = {"name": "Alice", "age": 30}
+person["city"] = "London"
+print(person)
+person["age"] = 31
+print(person)
+
+extra = {"city": "London", "age": 31, "score": 95}
+person.update(extra)
+print(person)
+
+del person["city"]
+print(person)
+
+removed = person.pop("age")
+print(removed)
+print(person)
+
+# Chapter 8 – Sets
+fruits = {"apple", "banana", "cherry", "apple", "banana"}
+print(fruits)
+print(type(fruits))
+
+from_list  = set([1, 2, 2, 3, 3, 3, 4])
+print(from_list)
+
+numbers = {1, 2, 3, 4}
+numbers.add(5)
+numbers.add(3)
+print(numbers)
+numbers.discard(2)
+numbers.discard(99)
+print(numbers)
+
+a = {1, 2, 3, 4, 5}
+b = {3, 4, 5, 6, 7}
+print(a | b)   # union
+print(a & b)   # intersection
+print(a - b)   # difference
+print(b - a)
+print(a ^ b)   # symmetric difference
+
+# Remove duplicates from list
+items = ["apple","banana","apple","cherry","banana","mango"]
+unique_items = list(set(items))
+print(unique_items)
