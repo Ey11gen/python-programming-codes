@@ -1,0 +1,533 @@
+# Chapter 20 – Project 1: Personal Expense Tracker with CSV Storage
+import csv
+import os
+from datetime import date, datetime
+from pathlib import Path
+from collections import defaultdict
+
+DATA_FILE  = Path("expenses.csv")
+CATEGORIES = {"Food","Transport","Housing","Health","Entertainment","Other"}
+FIELDNAMES = ["id","date","category","description","amount"]
+
+def ensure_file():
+    if not DATA_FILE.exists():
+        with open(DATA_FILE, "w", newline="") as f:
+            csv.DictWriter(f, fieldnames=FIELDNAMES).writeheader()
+
+def get_next_id():
+    expenses = load_all()
+    if not expenses:
+        return 1
+    return max(int(e["id"]) for e in expenses) + 1
+
+def load_all():
+    ensure_file()
+    expenses = []
+    with open(DATA_FILE, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row["amount"] = float(row["amount"])
+            expenses.append(row)
+    return expenses
+
+def add_expense(category, description, amount, expense_date=None):
+    if category not in CATEGORIES:
+        raise ValueError(f"Invalid category. Choose from: {CATEGORIES}")
+    if amount <= 0:
+        raise ValueError(f"Amount must be positive, got {amount}.")
+    expense_date = expense_date or date.today().isoformat()
+    ensure_file()
+    new_id = get_next_id()
+    with open(DATA_FILE, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        writer.writerow({"id":new_id,"date":expense_date,"category":category,
+                         "description":description,"amount":round(amount, 2)})
+    print(f"Added: [{new_id}] {category} - {description}: ${amount:.2f}")
+    return new_id
+
+def summary_by_category(expenses=None):
+    if expenses is None:
+        expenses = load_all()
+    totals = defaultdict(float)
+    for e in expenses:
+        totals[e["category"]] += e["amount"]
+    return dict(sorted(totals.items(), key=lambda x: x[1], reverse=True))
+
+def summary_by_month(expenses=None):
+    if expenses is None:
+        expenses = load_all()
+    monthly = defaultdict(float)
+    for e in expenses:
+        monthly[e["date"][:7]] += e["amount"]
+    return dict(sorted(monthly.items()))
+
+def print_full_report(expenses=None):
+    if expenses is None:
+        expenses = load_all()
+    if not expenses:
+        print("No expenses recorded.")
+        return
+    grand_total = sum(e["amount"] for e in expenses)
+    print()
+    print("=" * 55)
+    print(f"  EXPENSE REPORT   ({len(expenses)} transactions)")
+    print("=" * 55)
+    print(f"  {'Date':<12} {'Category':<14} {'Description':<18} {'Amount':>7}")
+    print(f"  {'-'*12} {'-'*14} {'-'*18} {'-'*7}")
+    for e in sorted(expenses, key=lambda x: x["date"]):
+        print(f"  {e['date']:<12} {e['category']:<14} {e['description'][:17]:<18} ${e['amount']:>6.2f}")
+    print(f"  {'-'*55}")
+    print(f"  {'TOTAL':<46} ${grand_total:>6.2f}")
+    print()
+    print("  BY CATEGORY:")
+    for cat, total in summary_by_category(expenses).items():
+        pct = total / grand_total * 100
+        bar = '#' * int(pct / 3)
+        print(f"  {cat:<15} ${total:>7.2f}  {pct:5.1f}%  {bar}")
+    print()
+    print("  BY MONTH:")
+    for month, total in summary_by_month(expenses).items():
+        print(f"  {month}   ${total:>8.2f}")
+    print("=" * 55)
+
+if __name__ == "__main__":
+    ensure_file()
+    add_expense("Food",          "Lunch at cafe",        12.50,  "2026-03-01")
+    add_expense("Transport",     "Monthly bus pass",     52.00,  "2026-03-01")
+    add_expense("Food",          "Grocery shopping",     87.30,  "2026-03-03")
+    add_expense("Entertainment", "Cinema tickets",       24.00,  "2026-03-05")
+    add_expense("Health",        "Pharmacy",             18.75,  "2026-03-07")
+    add_expense("Food",          "Dinner out",           45.00,  "2026-03-10")
+    add_expense("Housing",       "Internet bill",        35.00,  "2026-03-01")
+    add_expense("Food",          "Coffee shop",          22.50,  "2026-03-12")
+    add_expense("Transport",     "Taxi to airport",      38.00,  "2026-03-14")
+    add_expense("Entertainment", "Streaming services",   19.99,  "2026-03-01")
+    print_full_report()
+
+# Chapter 20 – Project 2: Live Weather Dashboard
+# Requires: pip install requests
+import requests
+import json
+from datetime import datetime
+from pathlib import Path
+
+GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+WEATHER_URL   = "https://api.open-meteo.com/v1/forecast"
+CACHE_DIR     = Path(".weather_cache")
+CACHE_TTL_MIN = 30
+
+WMO_CODES = {
+    0:"Clear sky", 1:"Mainly clear", 2:"Partly cloudy", 3:"Overcast",
+    45:"Fog", 48:"Rime fog", 51:"Light drizzle", 53:"Moderate drizzle",
+    61:"Light rain", 63:"Moderate rain", 65:"Heavy rain",
+    71:"Light snow", 73:"Moderate snow", 75:"Heavy snow",
+    80:"Rain showers", 95:"Thunderstorm",
+}
+
+def get_cached(key):
+    CACHE_DIR.mkdir(exist_ok=True)
+    path = CACHE_DIR / f"{key}.json"
+    if not path.exists():
+        return None
+    age_minutes = (datetime.now() - datetime.fromtimestamp(path.stat().st_mtime)).seconds / 60
+    if age_minutes > CACHE_TTL_MIN:
+        return None
+    with open(path) as f:
+        return json.load(f)
+
+def set_cache(key, data):
+    CACHE_DIR.mkdir(exist_ok=True)
+    with open(CACHE_DIR / f"{key}.json", "w") as f:
+        json.dump(data, f)
+
+def geocode(city):
+    cache_key = f"geo_{city.lower().replace(' ','_')}"
+    cached    = get_cached(cache_key)
+    if cached:
+        return cached
+    try:
+        r = requests.get(GEOCODING_URL, params={"name": city, "count": 1}, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        if not data.get("results"):
+            raise ValueError(f"City not found: '{city}'")
+        result = data["results"][0]
+        coords = (result["latitude"], result["longitude"],
+                  f"{result['name']}, {result.get('country','')}")
+        set_cache(cache_key, coords)
+        return coords
+    except requests.exceptions.RequestException as e:
+        raise ConnectionError(f"Network error during geocoding: {e}")
+
+def fetch_weather(lat, lon):
+    cache_key = f"wx_{lat:.2f}_{lon:.2f}"
+    cached    = get_cached(cache_key)
+    if cached:
+        print("  (using cached weather data)")
+        return cached
+    params = {
+        "latitude": lat, "longitude": lon,
+        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code",
+        "daily":   "temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,wind_speed_10m_max",
+        "timezone": "auto", "forecast_days": 4,
+    }
+    try:
+        r = requests.get(WEATHER_URL, params=params, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        set_cache(cache_key, data)
+        return data
+    except requests.exceptions.RequestException as e:
+        raise ConnectionError(f"Weather API error: {e}")
+
+def describe_code(code):
+    return WMO_CODES.get(int(code), f"Code {code}")
+
+def display_dashboard(city_name, weather):
+    cur   = weather["current"]
+    daily = weather["daily"]
+    print()
+    print("=" * 52)
+    print(f"  WEATHER: {city_name}")
+    print(f"  As of: {datetime.now().strftime('%A %d %B %Y, %H:%M')}")
+    print("=" * 52)
+    print(f"  Condition:    {describe_code(cur['weather_code'])}")
+    print(f"  Temperature:  {cur['temperature_2m']}C (feels like {cur['apparent_temperature']}C)")
+    print(f"  Humidity:     {cur['relative_humidity_2m']}%")
+    print(f"  Wind:         {cur['wind_speed_10m']} km/h")
+    print()
+    print("  3-DAY FORECAST:")
+    print(f"  {'Date':<14} {'Condition':<18} {'High':>5} {'Low':>5} {'Rain':>6}")
+    print(f"  {'-'*14} {'-'*18} {'-'*5} {'-'*5} {'-'*6}")
+    for i, d in enumerate(daily["time"][1:4]):
+        day_name = datetime.strptime(d, "%Y-%m-%d").strftime("%a %d %b")
+        high     = daily["temperature_2m_max"][i+1]
+        low      = daily["temperature_2m_min"][i+1]
+        rain     = daily["precipitation_sum"][i+1]
+        wx       = describe_code(daily["weather_code"][i+1])
+        print(f"  {day_name:<14} {wx:<18} {high:>4}C {low:>4}C {rain:>5}mm")
+    print("=" * 52)
+
+def run(city):
+    print(f"Fetching weather for: {city}")
+    try:
+        lat, lon, display_name = geocode(city)
+        print(f"Location: {display_name} ({lat:.4f}, {lon:.4f})")
+        weather = fetch_weather(lat, lon)
+        display_dashboard(display_name, weather)
+    except (ValueError, ConnectionError) as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    for city in ["London", "Madrid", "Tokyo"]:
+        run(city)
+
+# Chapter 20 – Project 3: Intelligent File Organizer with Undo Log
+import shutil
+import json
+from pathlib import Path
+from datetime import datetime
+from collections import defaultdict
+
+RULES = {
+    "Images":    [".jpg",".jpeg",".png",".gif",".bmp",".webp",".svg",".tiff"],
+    "Documents": [".pdf",".docx",".doc",".txt",".xlsx",".pptx",".odt",".md"],
+    "Videos":    [".mp4",".avi",".mov",".mkv",".flv",".wmv",".m4v"],
+    "Audio":     [".mp3",".wav",".flac",".aac",".ogg",".m4a",".wma"],
+    "Archives":  [".zip",".tar",".gz",".rar",".7z",".bz2",".xz"],
+    "Code":      [".py",".js",".ts",".html",".css",".java",".cpp",".sh",".json"],
+    "Data":      [".csv",".tsv",".xml",".yaml",".yml",".sql",".db"],
+}
+SKIP_DIRS = {"Images","Documents","Videos","Audio","Archives","Code","Data","Other"}
+
+def classify(path):
+    ext = path.suffix.lower()
+    for category, exts in RULES.items():
+        if ext in exts:
+            return category
+    return "Other"
+
+def resolve_conflict(target):
+    if not target.exists():
+        return target
+    stem, suffix, parent = target.stem, target.suffix, target.parent
+    counter = 1
+    while True:
+        candidate = parent / f"{stem}_{counter}{suffix}"
+        if not candidate.exists():
+            return candidate
+        counter += 1
+
+def organize(folder, dry_run=False, log_file=None):
+    folder    = Path(folder)
+    if not folder.is_dir():
+        raise ValueError(f"Not a directory: {folder}")
+    summary   = defaultdict(lambda: {"count": 0, "size_bytes": 0})
+    undo_log  = []
+    errors    = []
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    for file in sorted(folder.iterdir()):
+        if not file.is_file() or file.name.startswith(".") or file.stem in SKIP_DIRS:
+            continue
+        category   = classify(file)
+        target_dir = folder / category
+        target     = resolve_conflict(target_dir / file.name)
+        size       = file.stat().st_size
+        summary[category]["count"]      += 1
+        summary[category]["size_bytes"] += size
+        if dry_run:
+            renamed = "(renamed)" if target.name != file.name else ""
+            print(f"  {file.name} -> {category}/{target.name} {renamed}")
+        else:
+            try:
+                target_dir.mkdir(exist_ok=True)
+                shutil.move(str(file), str(target))
+                undo_log.append({"from": str(target), "to": str(file)})
+                renamed = "(renamed)" if target.name != file.name else ""
+                print(f"  Moved: {file.name} -> {category}/{target.name} {renamed}")
+            except Exception as e:
+                errors.append({"file": file.name, "error": str(e)})
+                print(f"  ERROR: {file.name}: {e}")
+    if log_file and not dry_run:
+        with open(log_file, "w") as f:
+            json.dump({"timestamp": timestamp, "folder": str(folder),
+                       "undo": undo_log, "errors": errors}, f, indent=2)
+        print(f"  Undo log saved: {log_file}")
+    return dict(summary), errors
+
+def undo_organize(log_file):
+    with open(log_file) as f:
+        log = json.load(f)
+    print(f"Undoing run from {log['timestamp']}...")
+    for op in reversed(log["undo"]):
+        src, dst = Path(op["from"]), Path(op["to"])
+        if src.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(dst))
+            print(f"  Restored: {src.name} -> {dst}")
+        else:
+            print(f"  Skip (not found): {src}")
+    print("Undo complete.")
+
+def print_summary(summary, errors):
+    print()
+    print(f"  {'Category':<14} {'Files':>6} {'Size':>10}")
+    print(f"  {'-'*14} {'-'*6} {'-'*10}")
+    total_files, total_bytes = 0, 0
+    for cat, stats in sorted(summary.items()):
+        count = stats["count"]
+        size  = stats["size_bytes"]
+        total_files  += count
+        total_bytes  += size
+        size_str = f"{size/1024:.1f} KB" if size < 1_000_000 else f"{size/1_000_000:.1f} MB"
+        print(f"  {cat:<14} {count:>6} {size_str:>10}")
+    print(f"  {'-'*32}")
+    total_str = f"{total_bytes/1024:.1f} KB" if total_bytes < 1_000_000 else f"{total_bytes/1_000_000:.1f} MB"
+    print(f"  {'TOTAL':<14} {total_files:>6} {total_str:>10}")
+    if errors:
+        print(f"\n  Errors: {len(errors)}")
+        for e in errors:
+            print(f"    {e['file']}: {e['error']}")
+
+if __name__ == "__main__":
+    demo = Path("demo_folder")
+    demo.mkdir(exist_ok=True)
+    test_files = [
+        ("photo1.jpg",  b"\xff\xd8" + b"x"*1000),
+        ("photo2.jpg",  b"\xff\xd8" + b"y"*2000),
+        ("report.pdf",  b"%PDF"       + b"z"*5000),
+        ("notes.txt",   b"Hello world"*10),
+        ("data.csv",    b"a,b,c\n1,2,3\n"*100),
+        ("script.py",   b"print('hello')"*5),
+        ("song.mp3",    b"ID3"        + b"m"*10000),
+        ("archive.zip", b"PK"         + b"a"*3000),
+        ("photo1.jpg",  b"\xff\xd8" + b"COPY"*500),
+    ]
+    for name, content in test_files:
+        (demo / name).write_bytes(content)
+    print("--- DRY RUN ---")
+    summary, errors = organize("demo_folder", dry_run=True)
+    print_summary(summary, errors)
+    print("\n--- ACTUAL RUN ---")
+    summary, errors = organize("demo_folder", dry_run=False, log_file="undo_log.json")
+    print_summary(summary, errors)
+
+# Chapter 20 – Project 4: Data Analysis Report Generator
+# Requires: pip install matplotlib pandas numpy openpyxl
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from datetime import datetime
+
+OUTPUT_DIR = Path("report_output")
+
+def generate_dataset(n=500, seed=42):
+    np.random.seed(seed)
+    products = ["Alpha","Beta","Gamma","Delta","Epsilon"]
+    regions  = ["North","South","East","West","Central"]
+    channels = ["Online","Retail","Wholesale"]
+    prices   = {"Alpha":29.99,"Beta":49.99,"Gamma":89.99,"Delta":14.99,"Epsilon":119.99}
+    df = pd.DataFrame({
+        "date":    pd.date_range("2026-01-01", periods=n, freq="14h"),
+        "product": np.random.choice(products, n),
+        "region":  np.random.choice(regions,  n),
+        "channel": np.random.choice(channels, n, p=[0.50,0.35,0.15]),
+        "units":   np.random.randint(5, 200, n),
+    })
+    df["price"]   = df["product"].map(prices)
+    df["revenue"] = df["units"] * df["price"]
+    df["month"]   = df["date"].dt.month_name()
+    df["weekday"] = df["date"].dt.day_name()
+    mask = np.random.random(n) < 0.03
+    df.loc[mask, "units"] = np.nan
+    return df
+
+def clean(df):
+    df = df.copy()
+    missing = df["units"].isna().sum()
+    df["units"]   = df["units"].fillna(df.groupby("product")["units"].transform("median"))
+    df["units"]   = df["units"].astype(int)
+    df["revenue"] = df["units"] * df["price"]
+    return df, missing
+
+def analyze(df):
+    grand_revenue = df["revenue"].sum()
+    grand_units   = df["units"].sum()
+    by_product = df.groupby("product").agg(
+        revenue      =("revenue","sum"),
+        units        =("units",  "sum"),
+        transactions =("units",  "count"),
+    ).round(1).sort_values("revenue", ascending=False)
+    by_region  = df.groupby("region")["revenue"].sum().sort_values(ascending=False)
+    by_channel = df.groupby("channel")["revenue"].sum().sort_values(ascending=False)
+    month_order = ["January","February","March","April","May","June",
+                   "July","August","September","October","November","December"]
+    available   = [m for m in month_order if m in df["month"].unique()]
+    by_month    = df.groupby("month")["revenue"].sum().reindex(available)
+    pivot       = pd.pivot_table(df, values="revenue", index="product",
+                                 columns="region", aggfunc="sum", fill_value=0)
+    return {"grand_revenue":grand_revenue,"grand_units":grand_units,
+            "transactions":len(df),"by_product":by_product,
+            "by_region":by_region,"by_channel":by_channel,
+            "by_month":by_month,"pivot":pivot}
+
+def save_chart(fig, name):
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    path = OUTPUT_DIR / f"{name}.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    print(f"  Chart saved: {path.name}")
+    return path
+
+def generate_charts(results):
+    saved = []
+    bp = results["by_product"]
+    fig, ax = plt.subplots(figsize=(8,5))
+    bars = ax.barh(bp.index, bp["revenue"], color="black")
+    ax.set_title("Revenue by Product", fontsize=13)
+    ax.set_xlabel("Revenue ($)")
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x,_:f'${x/1000:.0f}k'))
+    for bar, val in zip(bars, bp["revenue"]):
+        ax.text(val+200, bar.get_y()+bar.get_height()/2, f"${val:,.0f}", va="center", fontsize=9)
+    plt.tight_layout()
+    saved.append(save_chart(fig, "product_revenue"))
+
+    br = results["by_region"]
+    fig, ax = plt.subplots(figsize=(7,7))
+    ax.pie(br.values, labels=br.index, autopct="%1.1f%%", startangle=90,
+           colors=["#1a1a1a","#4d4d4d","#808080","#b3b3b3","#e6e6e6"])
+    ax.set_title("Revenue Share by Region", fontsize=13)
+    plt.tight_layout()
+    saved.append(save_chart(fig, "region_pie"))
+
+    bm = results["by_month"]
+    fig, ax = plt.subplots(figsize=(9,5))
+    ax.plot(range(len(bm)), bm.values, "o-", color="black", linewidth=2, markersize=6)
+    ax.fill_between(range(len(bm)), bm.values, alpha=0.15, color="black")
+    ax.set_xticks(range(len(bm)))
+    ax.set_xticklabels([m[:3] for m in bm.index], rotation=45)
+    ax.set_title("Monthly Revenue Trend", fontsize=13)
+    ax.set_ylabel("Revenue ($)")
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x,_:f'${x/1000:.0f}k'))
+    ax.grid(True, linestyle=":", alpha=0.4)
+    plt.tight_layout()
+    saved.append(save_chart(fig, "monthly_trend"))
+
+    pivot = results["pivot"]
+    x     = np.arange(len(pivot.index))
+    width = 0.15
+    grays = ["#000000","#333333","#666666","#999999","#cccccc"]
+    fig, ax = plt.subplots(figsize=(9,5))
+    for j, (col, gray) in enumerate(zip(pivot.columns, grays)):
+        ax.bar(x + j*width, pivot[col], width, label=col, color=gray)
+    ax.set_title("Revenue by Product and Region", fontsize=13)
+    ax.set_ylabel("Revenue ($)")
+    ax.set_xticks(x + width*2)
+    ax.set_xticklabels(pivot.index)
+    ax.legend(fontsize=9, title="Region")
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x,_:f'${x/1000:.0f}k'))
+    plt.tight_layout()
+    saved.append(save_chart(fig, "product_region_grouped"))
+    return saved
+
+def write_text_report(results, missing_rows, chart_paths):
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    report_path = OUTPUT_DIR / "analysis_report.txt"
+    gr  = results["grand_revenue"]
+    gu  = results["grand_units"]
+    trx = results["transactions"]
+    lines = [
+        "=" * 60,
+        "  SALES ANALYSIS REPORT",
+        f"  Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        "=" * 60, "",
+        "EXECUTIVE SUMMARY",  "-" * 40,
+        f"  Total Revenue:    ${gr:>12,.2f}",
+        f"  Total Units Sold: {gu:>12,}",
+        f"  Transactions:     {trx:>12,}",
+        f"  Avg Order Value:  ${gr/trx:>12,.2f}",
+        f"  Missing rows fixed: {missing_rows}", "",
+        "REVENUE BY PRODUCT",  "-" * 40,
+    ]
+    for prod, row in results["by_product"].iterrows():
+        pct = row["revenue"] / gr * 100
+        lines.append(f"  {prod:<10} ${row['revenue']:>10,.2f}  ({pct:.1f}%)")
+    lines += ["","REVENUE BY REGION",  "-" * 40]
+    for region, rev in results["by_region"].items():
+        lines.append(f"  {region:<10} ${rev:>10,.2f}  ({rev/gr*100:.1f}%)")
+    lines += ["","MONTHLY REVENUE", "-" * 40]
+    for month, rev in results["by_month"].items():
+        bar = "|" * int(rev / gr * 100)
+        lines.append(f"  {month[:3]} ${rev:>9,.2f}  {bar}")
+    lines += ["","GENERATED CHARTS", "-" * 40]
+    for p in chart_paths:
+        lines.append(f"  {p.name}")
+    lines += ["","=" * 60]
+    report_text = "\n".join(lines)
+    with open(report_path, "w") as f:
+        f.write(report_text)
+    print(f"  Report saved: {report_path}")
+    print()
+    print(report_text)
+    return report_path
+
+def run():
+    print("Generating dataset...")
+    raw_df   = generate_dataset(500)
+    print(f"  Raw rows: {len(raw_df)}")
+    print("Cleaning data...")
+    df, missing = clean(raw_df)
+    print(f"  Fixed {missing} missing value(s).")
+    print("Analyzing...")
+    results = analyze(df)
+    print(f"  Grand revenue: ${results['grand_revenue']:,.2f}")
+    print("Generating charts...")
+    chart_paths = generate_charts(results)
+    print("Writing report...")
+    write_text_report(results, missing, chart_paths)
+
+if __name__ == "__main__":
+    run()
