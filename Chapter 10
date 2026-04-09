@@ -1,0 +1,154 @@
+# Chapter 10 – Custom exception classes
+class InsufficientFundsError(Exception):
+    """Raised when a withdrawal exceeds the available balance."""
+    def __init__(self, balance, amount):
+        self.balance = balance
+        self.amount  = amount
+        message = (
+            f"Cannot withdraw ${amount:.2f}: "
+            f"balance is only ${balance:.2f}."
+        )
+        super().__init__(message)
+
+def withdraw(balance, amount):
+    if amount > balance:
+        raise InsufficientFundsError(balance, amount)
+    return balance - amount
+
+try:
+    new_balance = withdraw(50.00, 75.00)
+except InsufficientFundsError as e:
+    print(f"Transaction failed: {e}")
+    print(f"  Available: ${e.balance:.2f}")
+    print(f"  Requested: ${e.amount:.2f}")
+
+# Chapter 10 – else and finally clauses
+def demonstrate_full_structure(divisor):
+    print(f"--- Testing with divisor={divisor} ---")
+    try:
+        result = 100 / divisor
+        print(f"Try block: computed {result}")
+    except ZeroDivisionError:
+        print("Except block: caught ZeroDivisionError")
+    else:
+        print("Else block: no exception occurred")
+    finally:
+        print("Finally block: always runs")
+
+demonstrate_full_structure(4)
+demonstrate_full_structure(0)
+
+# Chapter 10 – Raising and re-raising exceptions
+def set_age(age):
+    """Set a person's age, with validation."""
+    if not isinstance(age, int):
+        raise TypeError(f"Age must be an integer, got {type(age).__name__}.")
+    if age < 0 or age > 150:
+        raise ValueError(f"Age must be between 0 and 150, got {age}.")
+    return age
+
+try:
+    print(set_age(25))
+    print(set_age(-5))
+except ValueError as e:
+    print(f"Invalid age: {e}")
+
+try:
+    print(set_age("thirty"))
+except TypeError as e:
+    print(f"Wrong type: {e}")
+
+# Chapter 10 – Robust file processor with custom exceptions
+import csv
+import os
+
+class DataFormatError(Exception):
+    """Raised when data in a row does not match the expected format."""
+    pass
+
+def parse_row(row, row_number):
+    """Parse a CSV row dict, raising DataFormatError for bad data."""
+    try:
+        name  = row.get("name", "").strip()
+        value = float(row.get("value", ""))
+        if not name:
+            raise DataFormatError(f"Row {row_number}: name is empty.")
+        if value < 0:
+            raise DataFormatError(f"Row {row_number}: value {value} is negative.")
+        return name, value
+    except ValueError:
+        raise DataFormatError(f"Row {row_number}: cannot convert value to number.")
+
+def process_csv(filename):
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f"Input file not found: {filename}")
+    valid  = []
+    errors = []
+    with open(filename, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader, start=2):
+            try:
+                name, value = parse_row(row, i)
+                valid.append((name, value))
+            except DataFormatError as e:
+                errors.append(str(e))
+    return valid, errors
+
+if __name__ == "__main__":
+    with open("sample_data.csv", "w", newline="") as f:
+        f.write("name,value\n")
+        f.write("Alpha,100\n")
+        f.write("Beta,250\n")
+        f.write(",300\n")
+        f.write("Gamma,abc\n")
+        f.write("Delta,-50\n")
+        f.write("Epsilon,175\n")
+
+    records, issues = process_csv("sample_data.csv")
+    print(f"Valid records: {len(records)}")
+    for name, value in records:
+        print(f"  {name:<12} {value:>8.1f}")
+    if issues:
+        print(f"\nIssues found ({len(issues)}):")
+        for issue in issues:
+            print(f"  - {issue}")
+    total = sum(v for _, v in records)
+    print(f"\nTotal: {total:.1f}")
+
+# Chapter 10 – try / except basics
+try:
+    number = int("hello")
+except ValueError:
+    print("That is not a valid number.")
+
+def safe_divide(numerator, denominator):
+    """Divide two numbers, handling division by zero gracefully."""
+    try:
+        result = numerator / denominator
+        return result
+    except ZeroDivisionError:
+        print("Error: Cannot divide by zero.")
+        return None
+
+print(safe_divide(100, 4))
+print(safe_divide(100, 0))
+
+def parse_and_compute(value_str, index_str, numbers):
+    try:
+        value  = int(value_str)
+        index  = int(index_str)
+        result = numbers[index] / value
+        return result
+    except ValueError:
+        print("Error: Both arguments must be integers.")
+    except IndexError:
+        print("Error: Index is out of range.")
+    except ZeroDivisionError:
+        print("Error: Value cannot be zero.")
+    return None
+
+nums = [10, 20, 30, 40]
+print(parse_and_compute("2",     "1", nums))
+print(parse_and_compute("hello", "1", nums))
+print(parse_and_compute("2",     "9", nums))
+print(parse_and_compute("0",     "1", nums))
