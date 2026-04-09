@@ -1,0 +1,146 @@
+# Chapter 16 – Regex-based validation library
+import re
+import calendar
+
+_EMAIL_RE    = re.compile(r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$")
+_PHONE_RE    = re.compile(r"^\+?[\d\s\-().]{7,20}$")
+_URL_RE      = re.compile(r"^https?://[^\s/$.?#].[^\s]*$")
+_DATE_RE     = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
+
+def validate_email(value):
+    return bool(_EMAIL_RE.match(value))
+
+def validate_phone(value):
+    return bool(_PHONE_RE.match(value.strip()))
+
+def validate_url(value):
+    return bool(_URL_RE.match(value))
+
+def validate_date(value):
+    match = _DATE_RE.match(value)
+    if not match:
+        return False
+    year, month, day = int(match.group(1)), int(match.group(2)), int(match.group(3))
+    max_day = calendar.monthrange(year, month)[1]
+    return day <= max_day
+
+if __name__ == "__main__":
+    test_emails = ["alice@example.com","bad@","x@y.c","ok+tag@domain.co.uk"]
+    test_dates  = ["2026-03-15","2026-13-01","2026-02-30","2026-11-30"]
+    for e in test_emails:
+        print(f"  {e:<30} email={validate_email(e)}")
+    for d in test_dates:
+        print(f"  {d:<15} date={validate_date(d)}")
+
+# Chapter 16 – Groups and named groups
+import re
+
+date_text = "Today is 2026-03-15 and tomorrow is 2026-03-16."
+pattern   = r"(\d{4})-(\d{2})-(\d{2})"
+matches   = re.findall(pattern, date_text)
+print(matches)
+
+for match in re.finditer(pattern, date_text):
+    year, month, day = match.groups()
+    print(f"Year: {year}, Month: {month}, Day: {day}")
+    print(f"Full match: {match.group(0)}, Start: {match.start()}")
+
+log_line = "2026-03-15 14:32:07 ERROR Connection timeout after 30s"
+named_pattern = (
+    r"(?P<date>\d{4}-\d{2}-\d{2}) "
+    r"(?P<time>\d{2}:\d{2}:\d{2}) "
+    r"(?P<level>\w+) "
+    r"(?P<message>.+)"
+)
+match = re.search(named_pattern, log_line)
+if match:
+    print(match.groupdict())
+
+# Chapter 16 – Log file parser with regex
+import re
+from collections import Counter
+
+LOG_PATTERN = re.compile(
+    r"(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) "
+    r"\[(?P<level>\w+)\] "
+    r"(?P<module>[\w.]+): "
+    r"(?P<message>.+)"
+)
+
+log_data = (
+    "2026-03-15 08:01:22 [INFO] app.startup: Server starting on port 8080\n"
+    "2026-03-15 08:01:25 [INFO] app.db: Database connection established\n"
+    "2026-03-15 08:03:41 [WARNING] app.auth: Login attempt from unknown IP\n"
+    "2026-03-15 08:07:13 [ERROR] app.api: Timeout connecting to payment gateway\n"
+    "2026-03-15 08:07:15 [ERROR] app.api: Retry 1 of 3 failed for payment gateway\n"
+    "2026-03-15 08:09:00 [INFO] app.auth: User alice logged in successfully\n"
+    "2026-03-15 08:11:42 [WARNING] app.db: Query took 4.2s, consider indexing\n"
+    "2026-03-15 08:13:05 [ERROR] app.api: All retries exhausted for payment gateway"
+)
+
+records      = []
+level_counts = Counter()
+for line in log_data.strip().split("\n"):
+    match = LOG_PATTERN.search(line)
+    if match:
+        rec = match.groupdict()
+        records.append(rec)
+        level_counts[rec["level"]] += 1
+
+print(f"Total log lines parsed: {len(records)}")
+print(f"Level breakdown: {dict(level_counts)}")
+errors = [r for r in records if r["level"] == "ERROR"]
+print(f"\nErrors ({len(errors)}):")
+for e in errors:
+    print(f"  [{e['timestamp']}] {e['module']}: {e['message']}")
+
+# Chapter 16 – Regular expression basics
+import re
+
+text = "The meeting is on Monday at 10:30 in Room 4B."
+if re.search(r"Monday", text):
+    print("Found: Monday appears in the text.")
+if re.search(r"\d{2}:\d{2}", text):
+    print("Found: A time pattern appears in the text.")
+
+print(re.findall(r"c.t",  "cat cot cut cbt"))
+print(re.findall(r"[aeiou]",    "Hello World 123"))
+print(re.findall(r"[A-Z]",      "Hello World Python"))
+print(re.findall(r"[a-z]+",     "Hello World 123"))
+print(re.findall(r"[0-9]+",     "Hello World 123"))
+
+text2 = "color colour colours colored"
+print(re.findall(r"colou?r",     text2))
+print(re.findall(r"colou?rs?",   text2))
+print(re.findall(r"colou?r\w*", text2))
+
+# Chapter 16 – Substitution and flags
+import re
+
+# re.sub
+dates = "Today: 15/03/2026. Yesterday: 14/03/2026."
+iso   = re.sub(r"(\d{2})/(\d{2})/(\d{4})", r"\3-\2-\1", dates)
+print(iso)
+
+sentence = "Python is great. Python is powerful."
+result   = re.sub(r"Python", lambda m: f"**{m.group(0)}**", sentence)
+print(result)
+
+# Compiled pattern
+EMAIL_PATTERN = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
+texts = [
+    "Contact alice@example.com for billing.",
+    "Support: help@company.co.uk or admin@company.co.uk",
+    "No email in this line.",
+]
+for text in texts:
+    found = EMAIL_PATTERN.findall(text)
+    if found:
+        print(f"Found {len(found)}: {found}")
+    else:
+        print("No email found.")
+
+# Flags
+text = "Python is great.\nPYTHON IS POWERFUL.\nPython scales well."
+print(re.findall(r"python", text, re.IGNORECASE))
+print(re.findall(r"^Python", text, re.MULTILINE))
