@@ -1,0 +1,117 @@
+# Chapter 2 – Core data types
+population = 8_000_000_000
+temperature = -40
+score = 0
+print(type(population))
+
+pi     = 3.14159
+height = 1.75
+price  = 9.99
+print(type(pi))
+
+print(0.1 + 0.2)   # floating-point imprecision demo
+
+greeting = "Hello, World!"
+name     = 'Alice'
+print(type(greeting))
+
+is_logged_in   = True
+has_subscription = False
+print(type(is_logged_in))
+
+result = None
+print(result)
+print(type(result))
+
+# Chapter 2 – All arithmetic operators
+print(15 + 7)    # addition
+print(20 - 8)    # subtraction
+print(6  * 7)    # multiplication
+print(15 / 3)    # division (always float)
+print(17 // 5)   # floor division
+print(17 %  5)   # modulo (remainder)
+print(2  ** 10)  # exponentiation
+
+# Payroll example
+hourly_rate        = 25
+hours_worked       = 37
+overtime_hours     = 5
+overtime_multiplier = 1.5
+regular_pay        = hourly_rate * hours_worked
+overtime_pay       = hourly_rate * overtime_multiplier * overtime_hours
+total_pay          = regular_pay + overtime_pay
+print(total_pay)
+
+# Comparison operators
+print(10 == 10)
+print(10 != 20)
+print(15 >  10)
+print(5  <  10)
+print(10 >= 10)
+print(10 <= 9)
+
+# Logical operators
+age      = 25
+has_id   = True
+print(age >= 18 and has_id)
+
+is_member  = False
+has_coupon = True
+print(is_member or has_coupon)
+
+is_raining = False
+print(not is_raining)
+
+# Assignment operators
+counter = 0
+counter += 1
+print(counter)
+counter += 5
+print(counter)
+
+value  = 20
+value -= 5
+print(value)
+value *= 3
+print(value)
+value //= 4
+print(value)
+
+# Chapter 2 – Type conversion / casting
+number_as_string = "42"
+number_as_int    = int(number_as_string)
+print(number_as_int + 8)
+
+temperature = 98.6
+print(int(temperature))         # truncates to 98
+
+score   = 750
+message = "Your score is " + str(score)
+print(message)
+
+# Chapter 2 – Swapping two variables
+a = 10
+b = 20
+a, b = b, a
+print(a)
+print(b)
+
+# Chapter 2 – Variables and assignment
+age = 25
+print(age)
+age = 30
+print(age)
+
+price = 100
+discount = 15
+final_price = price - discount
+print(final_price)
+
+# Multiple assignment
+x = y = z = 0
+print(x, y, z)
+
+first_name, last_name, age = "Alice", "Smith", 30
+print(first_name)
+print(last_name)
+print(age)
