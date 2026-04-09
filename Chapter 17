@@ -1,0 +1,172 @@
+# Chapter 17 – Full analysis pipeline with Excel output
+# Requires: pip install pandas openpyxl numpy
+import pandas as pd
+import numpy as np
+
+def load_sales_data():
+    np.random.seed(42)
+    n = 200
+    df = pd.DataFrame({
+        "product": np.random.choice(["Alpha","Beta","Gamma","Delta"], n),
+        "region":  np.random.choice(["North","South","East","West"],  n),
+        "units":   np.random.randint(10, 300, n),
+        "price":   np.random.choice([29.99, 49.99, 89.99, 119.99],   n),
+    })
+    mask = np.random.random(n) < 0.05
+    df.loc[mask, "units"] = np.nan
+    return df
+
+def clean_data(df):
+    df = df.copy()
+    df["units"]   = df["units"].fillna(df.groupby("product")["units"].transform("median"))
+    df["units"]   = df["units"].astype(int)
+    df["revenue"] = df["units"] * df["price"]
+    return df
+
+def analyze(df):
+    by_product = df.groupby("product").agg(
+        total_units   =("units",   "sum"),
+        total_revenue =("revenue", "sum"),
+        transactions  =("units",   "count"),
+    ).round(2).sort_values("total_revenue", ascending=False)
+    by_region = df.groupby("region")["revenue"].sum().sort_values(ascending=False)
+    top5      = df.nlargest(5, "revenue")[["product","region","units","revenue"]]
+    return by_product, by_region, top5
+
+raw            = load_sales_data()
+clean          = clean_data(raw)
+prod, reg, top = analyze(clean)
+
+print("=== By Product ===")
+print(prod)
+print("\n=== By Region ===")
+print(reg)
+print("\n=== Top 5 Transactions ===")
+print(top.to_string(index=False))
+
+with pd.ExcelWriter("analysis_report.xlsx", engine="openpyxl") as writer:
+    prod.to_excel(writer, sheet_name="By Product")
+    reg.to_excel(writer, sheet_name="By Region")
+    top.to_excel(writer, sheet_name="Top Transactions", index=False)
+print("\nReport saved: analysis_report.xlsx")
+
+# Chapter 17 – Cleaning data
+import pandas as pd
+import numpy as np
+
+messy = pd.DataFrame({
+    "name":   ["Alice","Bob",  None,    "Diana","Eve",  "Frank"],
+    "age":    [30,     None,   25,      32,     None,   28],
+    "salary": [75000,  55000,  None,    60000,  80000,  None],
+    "dept":   ["Eng",  "Mktg", "Eng",   None,   "HR",   "Eng"],
+})
+print("Missing values per column:")
+print(messy.isnull().sum())
+
+filled_constant = messy["dept"].fillna("Unknown")
+filled_mean     = messy["salary"].fillna(messy["salary"].mean())
+dropped         = messy.dropna()
+print(f"\nOriginal: {len(messy)} rows, After dropna: {len(dropped)} rows")
+
+# String cleaning with .str accessor
+df2 = pd.DataFrame({
+    "full_name":  ["  alice Smith ", "BOB JONES",    "Carlos  garcia"],
+    "salary_str": ["$75,000",        "$55,500",       "$82,000"],
+})
+df2["full_name"]  = df2["full_name"].str.strip().str.title()
+df2["first_name"] = df2["full_name"].str.split().str[0]
+df2["salary"]     = df2["salary_str"].str.replace(r"[$,]", "", regex=True).astype(int)
+print(df2[["full_name","first_name","salary"]])
+
+# Chapter 17 – Merging and joining DataFrames
+import pandas as pd
+
+customers = pd.DataFrame({
+    "customer_id": [1, 2, 3, 4, 5],
+    "name":        ["Alice","Bob","Carlos","Diana","Eve"],
+    "city":        ["London","Paris","Madrid","Berlin","Rome"],
+})
+orders = pd.DataFrame({
+    "order_id":    [101,102,103,104,105,106],
+    "customer_id": [1, 2, 1, 3, 2, 6],
+    "product":     ["Alpha","Beta","Gamma","Alpha","Alpha","Beta"],
+    "amount":      [299.99,149.50,89.99,299.99,299.99,149.50],
+})
+
+inner = pd.merge(orders, customers, on="customer_id", how="inner")
+print(f"Inner join: {len(inner)} rows")
+print(inner[["order_id","name","product","amount"]])
+
+left  = pd.merge(orders, customers, on="customer_id", how="left")
+print(f"\nLeft join: {len(left)} rows")
+print(left[["order_id","name","product","amount"]].to_string(index=False))
+
+customer_totals = inner.groupby("name")["amount"].sum().reset_index()
+customer_totals.columns = ["name","total_spent"]
+final = pd.merge(customers, customer_totals, on="name", how="left").fillna(0)
+print("\nCustomer spending:")
+print(final.to_string(index=False))
+
+# Chapter 17 – Loading and exploring DataFrames
+import pandas as pd
+import numpy as np
+
+np.random.seed(42)
+n = 200
+df = pd.DataFrame({
+    "product":    np.random.choice(["Alpha","Beta","Gamma","Delta"], n),
+    "region":     np.random.choice(["North","South","East","West"],  n),
+    "units_sold": np.random.randint(10, 300, n),
+    "unit_price": np.random.choice([29.99, 49.99, 89.99, 119.99], n),
+})
+df["revenue"]  = df["units_sold"] * df["unit_price"]
+df["net_units"] = df["units_sold"]
+
+print(f"Shape: {df.shape}")
+print(df.head())
+print()
+print(df.dtypes)
+print()
+print(df.describe())
+print()
+print(df["product"].value_counts())
+
+# Chapter 17 – Transforming, sorting, and pivot tables
+import pandas as pd
+import numpy as np
+
+df = pd.DataFrame({
+    "name":   ["Alice","Bob","Carlos","Diana","Eve"],
+    "dept":   ["Eng","Mktg","Eng","HR","Eng"],
+    "salary": [75000, 55000, 82000, 60000, 91000],
+    "years":  [5, 3, 8, 4, 10],
+    "rating": [4.2, 3.8, 4.7, 4.0, 4.9],
+})
+
+def grade_rating(r):
+    if r >= 4.5:  return "Excellent"
+    elif r >= 4.0: return "Good"
+    elif r >= 3.5: return "Average"
+    return "Below Average"
+
+df["perf_grade"] = df["rating"].apply(grade_rating)
+df["bonus"]      = df.apply(
+    lambda row: row["salary"] * 0.15 if row["rating"] >= 4.5 else row["salary"] * 0.05,
+    axis=1
+)
+df["salary_band"] = pd.cut(df["salary"], bins=[0,60000,75000,100000], labels=["Lower","Mid","Upper"])
+print(df[["name","salary","rating","perf_grade","bonus","salary_band"]])
+
+by_salary = df.sort_values("salary", ascending=False)
+print("\nBy salary (desc):")
+print(by_salary[["name","salary"]].to_string(index=False))
+
+# Pivot table
+df2 = pd.DataFrame({
+    "product": ["Alpha","Beta","Alpha","Gamma","Beta","Alpha"],
+    "region":  ["North","South","North","East","West","South"],
+    "revenue": [3599,4249,5998,4050,15497,5248],
+})
+pivot = pd.pivot_table(df2, values="revenue", index="product", columns="region", aggfunc="sum", fill_value=0)
+print("\nPivot table:")
+print(pivot)
