@@ -1,0 +1,181 @@
+# Chapter 13 – Abstract classes and required interfaces
+from abc import ABC, abstractmethod
+
+class PaymentProcessor(ABC):
+    def __init__(self, currency="USD"):
+        self.currency     = currency
+        self.transactions = []
+
+    @abstractmethod
+    def process_payment(self, amount, recipient):
+        pass
+
+    @abstractmethod
+    def refund(self, transaction_id):
+        pass
+
+    def get_transaction_count(self):
+        return len(self.transactions)
+
+class PayPalProcessor(PaymentProcessor):
+    def process_payment(self, amount, recipient):
+        tx_id = f"PP-{len(self.transactions)+1:04d}"
+        self.transactions.append({"id": tx_id, "amount": amount, "to": recipient})
+        print(f"PayPal: Sent {self.currency}{amount:.2f} to {recipient} [{tx_id}]")
+        return tx_id
+
+    def refund(self, transaction_id):
+        print(f"PayPal: Refunded transaction {transaction_id}")
+
+class StripeProcessor(PaymentProcessor):
+    def process_payment(self, amount, recipient):
+        tx_id = f"ST-{len(self.transactions)+1:04d}"
+        self.transactions.append({"id": tx_id, "amount": amount, "to": recipient})
+        print(f"Stripe: Charged {self.currency}{amount:.2f} for {recipient} [{tx_id}]")
+        return tx_id
+
+    def refund(self, transaction_id):
+        print(f"Stripe: Issued reversal for {transaction_id}")
+
+processors = [PayPalProcessor("EUR"), StripeProcessor()]
+for proc in processors:
+    t1 = proc.process_payment(99.99, "Alice's Order")
+    proc.process_payment(49.50, "Bob's Order")
+    proc.refund(t1)
+    print(f"  Transactions: {proc.get_transaction_count()}")
+
+# Chapter 13 – Dunder / magic methods
+class Money:
+    def __init__(self, amount, currency="USD"):
+        self.amount   = round(amount, 2)
+        self.currency = currency
+
+    def _check_currency(self, other):
+        if self.currency != other.currency:
+            raise ValueError(f"Cannot mix {self.currency} and {other.currency}")
+
+    def __add__(self, other):
+        self._check_currency(other)
+        return Money(self.amount + other.amount, self.currency)
+
+    def __sub__(self, other):
+        self._check_currency(other)
+        return Money(self.amount - other.amount, self.currency)
+
+    def __mul__(self, factor):
+        return Money(self.amount * factor, self.currency)
+
+    def __eq__(self, other):
+        return self.currency == other.currency and self.amount == other.amount
+
+    def __lt__(self, other):
+        self._check_currency(other)
+        return self.amount < other.amount
+
+    def __le__(self, other):
+        self._check_currency(other)
+        return self.amount <= other.amount
+
+    def __str__(self):
+        return f"{self.currency} {self.amount:.2f}"
+
+    def __repr__(self):
+        return f"Money({self.amount}, '{self.currency}')"
+
+price    = Money(19.99)
+tax      = Money(1.60)
+total    = price + tax
+discount = total * 0.9
+print(total)
+print(discount)
+print(price < total)
+print(price == Money(19.99))
+amounts  = [Money(50), Money(25), Money(75), Money(10)]
+print(f"Min: {min(amounts)}")
+print(f"Max: {max(amounts)}")
+amounts.sort()
+print([str(m) for m in amounts])
+
+# Chapter 13 – Single inheritance and super()
+class Animal:
+    def __init__(self, name, species):
+        self.name    = name
+        self.species = species
+        self.energy  = 100
+
+    def eat(self, food):
+        self.energy += 20
+        print(f"{self.name} eats {food}. Energy: {self.energy}")
+
+    def sleep(self):
+        self.energy += 30
+        print(f"{self.name} sleeps. Energy: {self.energy}")
+
+    def __str__(self):
+        return f"{self.name} ({self.species})"
+
+class Dog(Animal):
+    def __init__(self, name, breed):
+        super().__init__(name, "Canis lupus familiaris")
+        self.breed = breed
+
+    def bark(self):
+        self.energy -= 10
+        print(f"{self.name} barks! Energy: {self.energy}")
+
+class Cat(Animal):
+    def __init__(self, name, indoor=True):
+        super().__init__(name, "Felis catus")
+        self.indoor = indoor
+
+    def purr(self):
+        print(f"{self.name} purrs contentedly.")
+
+dog = Dog("Rex", "Labrador")
+cat = Cat("Whiskers")
+dog.eat("kibble")
+dog.bark()
+dog.sleep()
+cat.eat("tuna")
+cat.purr()
+print(dog)
+print(cat)
+
+# Chapter 13 – Method overriding and polymorphism
+import math
+
+class Shape:
+    def __init__(self, color="black"):
+        self.color = color
+
+    def area(self):
+        return 0
+
+    def describe(self):
+        print(f"I am a {self.color} {type(self).__name__} with area {self.area():.2f}")
+
+class Circle(Shape):
+    def __init__(self, radius, color="black"):
+        super().__init__(color)
+        self.radius = radius
+
+    def area(self):
+        return math.pi * self.radius ** 2
+
+class Rectangle(Shape):
+    def __init__(self, width, height, color="black"):
+        super().__init__(color)
+        self.width  = width
+        self.height = height
+
+    def area(self):
+        return self.width * self.height
+
+class Square(Rectangle):
+    def __init__(self, side, color="black"):
+        super().__init__(side, side, color)
+
+shapes = [Circle(5,"red"), Rectangle(4,6,"blue"), Square(3,"green")]
+for shape in shapes:
+    shape.describe()
+    print(f"  Area: {shape.area():.2f}")
