@@ -1,0 +1,154 @@
+# Chapter 5 – break, continue, loop else
+# break: search and stop
+numbers  = [3, 7, 12, 5, 20, 8, 15]
+target   = 20
+found_at = -1
+for i in range(len(numbers)):
+    if numbers[i] == target:
+        found_at = i
+        break
+if found_at >= 0:
+    print(f"Found {target} at index {found_at}.")
+else:
+    print(f"{target} not found.")
+
+# continue: skip even numbers
+for number in range(1, 11):
+    if number % 2 == 0:
+        continue
+    print(number)
+
+# loop else
+target2 = 99
+for number in [3, 7, 12, 5, 8, 15]:
+    if number == target2:
+        print(f"Found {target2}.")
+        break
+else:
+    print(f"{target2} was not found.")
+
+# Chapter 5 – for loops and range()
+word = "Python"
+for letter in word:
+    print(letter)
+
+for i in range(5):
+    print(i)
+
+for i in range(1, 6):
+    print(i)
+
+for i in range(0, 20, 5):
+    print(i)
+
+for i in range(10, 0, -1):
+    print(i)
+
+# Accumulation: sum 1 to 100
+total = 0
+for i in range(1, 101):
+    total += i
+print(f"Sum of 1 to 100: {total}")
+
+# Iterating a list
+fruits = ["apple", "banana", "cherry", "mango"]
+for fruit in fruits:
+    print(f"I like {fruit}.")
+
+# enumerate
+for index, fruit in enumerate(fruits):
+    print(f"{index}: {fruit}")
+
+# Chapter 5 – Common loop patterns
+
+# Count vowels
+text        = "The quick brown fox jumps over the lazy dog."
+vowel_count = 0
+for char in text.lower():
+    if char in "aeiou":
+        vowel_count += 1
+print(f"Number of vowels: {vowel_count}")
+
+# Build string: letters only
+raw_input    = "H3ll0 W0rld! 2026"
+letters_only = ""
+for char in raw_input:
+    if char.isalpha():
+        letters_only += char
+print(letters_only)
+
+# Find max and min manually
+values  = [42, 17, 83, 5, 61, 29, 94, 38]
+maximum = values[0]
+minimum = values[0]
+for value in values:
+    if value > maximum:
+        maximum = value
+    if value < minimum:
+        minimum = value
+print(f"Maximum: {maximum}")
+print(f"Minimum: {minimum}")
+
+# Times table for 7
+number = 7
+print(f"Multiplication table for {number}:")
+print("-" * 25)
+for i in range(1, 13):
+    result = number * i
+    print(f"  {number} x {i:2} = {result:3}")
+
+# Chapter 5 – Nested loops: multiplication table
+for i in range(1, 6):
+    for j in range(1, 6):
+        product = i * j
+        print(f"{product:3}", end="")
+    print()
+
+# Finding pairs that sum to a target
+list_a     = [1, 3, 5, 7]
+list_b     = [2, 4, 6, 8]
+target_sum = 9
+for a in list_a:
+    for b in list_b:
+        if a + b == target_sum:
+            print(f"{a} + {b} = {target_sum}")
+
+# Chapter 5 – Number guessing game (simulated guesses)
+secret_number = 42
+max_guesses   = 7
+guesses       = [10, 60, 35, 50, 40, 45, 42]
+guess_count   = 0
+game_won      = False
+
+print("Welcome to the Number Guessing Game!")
+print(f"I am thinking of a number between 1 and 100.")
+print(f"You have {max_guesses} guesses.")
+print("-" * 40)
+
+for guess in guesses:
+    if guess_count >= max_guesses:
+        break
+    guess_count += 1
+    print(f"Guess {guess_count}: {guess}")
+    if guess == secret_number:
+        game_won = True
+        break
+    elif guess < secret_number:
+        remaining = max_guesses - guess_count
+        print(f"  Too low! {remaining} guess(es) remaining.")
+    else:
+        remaining = max_guesses - guess_count
+        print(f"  Too high! {remaining} guess(es) remaining.")
+
+print("-" * 40)
+if game_won:
+    print(f"Congratulations! You guessed it in {guess_count} guess(es).")
+else:
+    print(f"Game over. The number was {secret_number}.")
+
+# Chapter 5 – while loops
+count = 1
+while count <= 5:
+    print(f"Count: {count}")
+    count += 1
+print("Loop finished.")
