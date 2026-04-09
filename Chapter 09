@@ -1,0 +1,174 @@
+# Chapter 9 – Reading and writing CSV files
+import csv
+
+# Write a CSV
+data = [
+    ["Product", "Category", "Price", "Stock"],
+    ["Coffee Mug", "Kitchen", 12.50, 45],
+    ["Notebook",   "Office",   4.99, 120],
+    ["Headphones", "Tech",    79.00,  18],
+]
+with open("products.csv", "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerows(data)
+print("products.csv written.")
+
+# Read with csv.reader
+with open("products.csv", "r", newline="") as f:
+    reader = csv.reader(f)
+    header = next(reader)
+    print(f"Columns: {header}")
+    for row in reader:
+        name, category, price, stock = row
+        print(f"  {name:<15} ${float(price):.2f}  ({stock} in stock)")
+
+# DictReader / DictWriter
+employees_data = [
+    {"Name": "Alice",  "Department": "Engineering", "Salary": "75000", "Years": "5"},
+    {"Name": "Bob",    "Department": "Marketing",   "Salary": "55000", "Years": "3"},
+    {"Name": "Carlos", "Department": "Engineering", "Salary": "80000", "Years": "8"},
+    {"Name": "Diana",  "Department": "HR",          "Salary": "60000", "Years": "4"},
+]
+with open("employees.csv", "w", newline="") as f:
+    writer = csv.DictWriter(f, fieldnames=["Name","Department","Salary","Years"])
+    writer.writeheader()
+    writer.writerows(employees_data)
+
+with open("employees.csv", "r", newline="") as f:
+    reader = csv.DictReader(f)
+    engineering = []
+    total_salary = 0
+    for row in reader:
+        total_salary += int(row["Salary"])
+        if row["Department"] == "Engineering":
+            engineering.append(row["Name"])
+print(f"Engineering team: {engineering}")
+print(f"Total payroll: ${total_salary:,}")
+
+# Chapter 9 – Mini-project: Personal Expense Logger
+import csv
+import os
+
+FILENAME   = "expenses.csv"
+FIELDNAMES = ["date", "category", "description", "amount"]
+
+def initialize_file():
+    """Create the CSV file with a header if it does not already exist."""
+    if not os.path.exists(FILENAME):
+        with open(FILENAME, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+            writer.writeheader()
+
+def add_expense(date, category, description, amount):
+    """Append one expense record to the CSV file."""
+    with open(FILENAME, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
+        writer.writerow({"date": date, "category": category,
+                         "description": description, "amount": amount})
+
+def load_expenses():
+    """Read all expenses and return them as a list of dictionaries."""
+    expenses = []
+    with open(FILENAME, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            row["amount"] = float(row["amount"])
+            expenses.append(row)
+    return expenses
+
+def print_summary(expenses):
+    """Print summary by category and grand total."""
+    totals = {}
+    for expense in expenses:
+        cat = expense["category"]
+        totals[cat] = totals.get(cat, 0.0) + expense["amount"]
+    print("\nExpense Summary:")
+    print("-" * 35)
+    grand_total = 0.0
+    for category, total in sorted(totals.items()):
+        print(f"  {category:<20} ${total:>8.2f}")
+        grand_total += total
+    print("-" * 35)
+    print(f"  {'TOTAL':<20} ${grand_total:>8.2f}")
+
+if __name__ == "__main__":
+    initialize_file()
+    add_expense("2026-03-01", "Food",      "Lunch at cafe",    12.50)
+    add_expense("2026-03-01", "Transport", "Bus ticket",        2.00)
+    add_expense("2026-03-02", "Food",      "Grocery shopping", 45.80)
+    add_expense("2026-03-02", "Tech",      "USB cable",         8.99)
+    add_expense("2026-03-03", "Food",      "Coffee",            3.50)
+    add_expense("2026-03-03", "Transport", "Train ticket",     15.00)
+    all_expenses = load_expenses()
+    print_summary(all_expenses)
+
+# Chapter 9 – Reading files in three ways
+# First create a sample file
+with open("sample.txt", "w") as f:
+    f.write("First line of the file.\n")
+    f.write("Second line of the file.\n")
+    f.write("Third line of the file.\n")
+    f.write("\n")
+    f.write("Fifth line after a blank.\n")
+
+# 1. Read entire file at once
+with open("sample.txt", "r") as f:
+    content = f.read()
+print(f"File has {len(content)} characters.")
+
+# 2. Line by line with for loop (memory-efficient)
+total_lines = 0
+total_words = 0
+with open("sample.txt", "r") as f:
+    for line in f:
+        clean_line = line.strip()
+        if clean_line:
+            total_lines += 1
+            total_words += len(clean_line.split())
+print(f"Lines: {total_lines}, Words: {total_words}")
+
+# 3. readlines() into a list
+with open("sample.txt", "r") as f:
+    lines = f.readlines()
+print(f"Number of lines: {len(lines)}")
+print(f"First: {lines[0].strip()}")
+print(f"Last:  {lines[-1].strip()}")
+
+# Chapter 9 – Writing and appending to files
+lines_to_save = [
+    "Alice, 30, London",
+    "Bob, 25, Paris",
+    "Carlos, 35, Madrid",
+]
+
+with open("people.txt", "w") as f:
+    for line in lines_to_save:
+        f.write(line + "\n")
+print("people.txt written.")
+
+import datetime
+log_entry = f"[{datetime.datetime.now()}] Program started.\n"
+with open("app.log", "a") as f:
+    f.write(log_entry)
+print("Log entry appended.")
+
+# Process: read raw, filter, write clean
+with open("raw_numbers.txt", "w") as f:
+    f.write("10\n25\nBAD\n7\n\n99\nERROR\n42\n")
+
+valid_numbers = []
+skipped       = 0
+with open("raw_numbers.txt", "r") as f:
+    for line in f:
+        stripped = line.strip()
+        if stripped.isdigit():
+            valid_numbers.append(int(stripped))
+        else:
+            skipped += 1
+
+with open("cleaned_numbers.txt", "w") as f:
+    for number in valid_numbers:
+        f.write(str(number) + "\n")
+
+print(f"Valid: {len(valid_numbers)}, Skipped: {skipped}")
+print(f"Sum of valid numbers: {sum(valid_numbers)}")
