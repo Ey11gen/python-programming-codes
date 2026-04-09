@@ -1,0 +1,164 @@
+# Chapter 15 – Batch file renaming to snake_case with date prefix
+import re
+from pathlib import Path
+from datetime import date
+
+def to_snake_case(name):
+    name = name.lower()
+    name = re.sub(r"[^a-z0-9]+", "_", name)
+    return name.strip("_")
+
+def batch_rename(folder, extension, dry_run=True):
+    folder    = Path(folder)
+    today_str = date.today().strftime("%Y%m%d")
+    renamed   = 0
+    for file in sorted(folder.glob(f"*{extension}")):
+        stem     = to_snake_case(file.stem)
+        new_name = f"{today_str}_{stem}{file.suffix}"
+        new_path = file.parent / new_name
+        if new_path == file:
+            continue
+        if dry_run:
+            print(f"  {file.name} -> {new_name}")
+        else:
+            file.rename(new_path)
+            print(f"  Renamed: {file.name} -> {new_name}")
+        renamed += 1
+    print(f"{'Would rename' if dry_run else 'Renamed'} {renamed} files.")
+
+if __name__ == "__main__":
+    test_dir = Path("rename_test")
+    test_dir.mkdir(exist_ok=True)
+    for name in ["My Report 2026.txt","Draft Notes - Final.txt","meeting summary.txt"]:
+        (test_dir / name).write_text("content")
+    print("--- DRY RUN ---")
+    batch_rename("rename_test", ".txt", dry_run=True)
+    print("\n--- ACTUAL ---")
+    batch_rename("rename_test", ".txt", dry_run=False)
+
+# Chapter 15 – File organizer by type
+import shutil
+from pathlib import Path
+
+CATEGORIES = {
+    "Images":    [".jpg",".jpeg",".png",".gif",".bmp",".svg",".webp"],
+    "Documents": [".pdf",".docx",".doc",".txt",".xlsx",".pptx",".odt"],
+    "Videos":    [".mp4",".avi",".mov",".mkv",".flv",".wmv"],
+    "Audio":     [".mp3",".wav",".flac",".aac",".ogg",".m4a"],
+    "Archives":  [".zip",".tar",".gz",".rar",".7z",".bz2"],
+    "Code":      [".py",".js",".html",".css",".java",".cpp",".sh"],
+}
+
+def get_category(suffix):
+    suffix_lower = suffix.lower()
+    for category, extensions in CATEGORIES.items():
+        if suffix_lower in extensions:
+            return category
+    return "Other"
+
+def organize_folder(folder_path, dry_run=False):
+    """Organize files in folder into category subfolders."""
+    folder  = Path(folder_path)
+    moved   = 0
+    skipped = 0
+    for file in folder.iterdir():
+        if not file.is_file():
+            continue
+        category    = get_category(file.suffix)
+        target_dir  = folder / category
+        target_file = target_dir / file.name
+        if target_file.exists():
+            print(f"  Skip (exists): {file.name}")
+            skipped += 1
+            continue
+        if dry_run:
+            print(f"  Would move: {file.name} -> {category}/")
+        else:
+            target_dir.mkdir(exist_ok=True)
+            shutil.move(str(file), str(target_file))
+            print(f"  Moved: {file.name} -> {category}/")
+        moved += 1
+    mode = "(dry run)" if dry_run else ""
+    print(f"Done {mode}: {moved} files processed, {skipped} skipped.")
+
+if __name__ == "__main__":
+    test_dir = Path("test_downloads")
+    test_dir.mkdir(exist_ok=True)
+    for name in ["photo.jpg","report.pdf","script.py","music.mp3","archive.zip","unknown.xyz"]:
+        (test_dir / name).write_text(f"content of {name}")
+    print("--- DRY RUN ---")
+    organize_folder("test_downloads", dry_run=True)
+    print("\n--- ACTUAL RUN ---")
+    organize_folder("test_downloads")
+
+# Chapter 15 – Log file archiver with zip and JSON audit trail
+import shutil
+import zipfile
+import logging
+import json
+from pathlib import Path
+from datetime import datetime, timedelta
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.FileHandler("archiver.log"), logging.StreamHandler()]
+)
+log = logging.getLogger(__name__)
+
+def find_old_logs(log_dir, days_old):
+    cutoff = datetime.now() - timedelta(days=days_old)
+    return [f for f in Path(log_dir).glob("*.log")
+            if datetime.fromtimestamp(f.stat().st_mtime) < cutoff]
+
+def create_zip_archive(files, archive_path):
+    archive_path = Path(archive_path)
+    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            zf.write(f, arcname=f.name)
+            log.info(f"Added to archive: {f.name}")
+    orig_size = sum(f.stat().st_size for f in files)
+    arch_size = archive_path.stat().st_size
+    ratio     = (1 - arch_size / orig_size) * 100 if orig_size else 0
+    log.info(f"Archive: {orig_size/1024:.1f}KB -> {arch_size/1024:.1f}KB ({ratio:.0f}% saved)")
+    return archive_path
+
+def run_archiver(log_dir, archive_dir, days_old=30, dry_run=False):
+    log.info(f"Archiver starting. Source: {log_dir}, Threshold: {days_old} days")
+    old_files = find_old_logs(log_dir, days_old)
+    if not old_files:
+        log.info("No files to archive.")
+        return {"archived": 0}
+    timestamp    = datetime.now().strftime("%Y%m%d_%H%M%S")
+    archive_name = f"logs_archive_{timestamp}.zip"
+    archive_path = Path(archive_dir) / archive_name
+    report       = {"date": str(datetime.now()), "files": [], "archive": archive_name, "dry_run": dry_run}
+    if dry_run:
+        for f in old_files:
+            log.info(f"  DRY RUN: would archive {f.name}")
+            report["files"].append(str(f.name))
+        return report
+    Path(archive_dir).mkdir(exist_ok=True)
+    try:
+        create_zip_archive(old_files, archive_path)
+        for f in old_files:
+            report["files"].append(str(f.name))
+            f.unlink()
+            log.info(f"Deleted original: {f.name}")
+        report["status"] = "success"
+    except Exception as e:
+        log.error(f"Archiving failed: {e}")
+        report["status"] = "error"
+    report_path = Path(archive_dir) / f"report_{timestamp}.json"
+    with open(report_path, "w") as rf:
+        json.dump(report, rf, indent=2)
+    log.info(f"Report saved: {report_path}")
+    return report
+
+if __name__ == "__main__":
+    demo = Path("demo_logs")
+    demo.mkdir(exist_ok=True)
+    for name in ["app_2026_01.log","app_2026_02.log","errors_2026_01.log"]:
+        (demo / name).write_text(f"Log content for {name}\n" * 20)
+    result = run_archiver("demo_logs", "demo_archive", days_old=0, dry_run=False)
+    print(json.dumps(result, indent=2))
