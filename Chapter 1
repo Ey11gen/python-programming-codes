@@ -1,0 +1,39 @@
+# Chapter 1 – About Me program
+print("Name:    Alice Smith")
+print("Country: Spain")
+print("Goal:    Learn Python from scratch")
+print("Reason:  Python is clear and powerful")
+
+# Chapter 1 – Basic arithmetic with print
+# Sum
+print("Sum of 347 and 589:", 347 + 589)
+# Difference
+print("Difference 1000 - 763:", 1000 - 763)
+# Product
+print("Product of 24 and 17:", 24 * 17)
+# Division
+print("500 divided by 8:", 500 / 8)
+# Exponentiation
+print("2 to the power of 10:", 2 ** 10)
+
+# Chapter 1 – Demonstrating comments
+# This is a comment. Python ignores this entire line.
+print("Hello, World!")  # This prints a greeting to the screen.
+
+# This program greets the user and displays a welcome message.
+print("Hello, World!")
+# Display a second line to complete the greeting.
+print("Welcome to Python programming.")
+
+# Chapter 1 – First Python script
+print("Hello, World!")
+print("Welcome to Python programming.")
+print("This is my first script.")
+
+# Chapter 1 – Examples to try in the interactive shell
+# Run these one at a time in the Python REPL (python3)
+print(2 + 2)
+print(10 * 5)
+print(100 / 4)
+print(9 ** 2)
+print("Hello, World!")
