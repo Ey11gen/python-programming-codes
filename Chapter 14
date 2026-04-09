@@ -1,0 +1,178 @@
+# Chapter 14 – Making HTTP requests (install: pip install requests)
+import requests
+
+# GET request with error handling
+url    = "https://jsonplaceholder.typicode.com/posts/1"
+try:
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    print(f"Post ID:    {data['id']}")
+    print(f"User ID:    {data['userId']}")
+    print(f"Title:      {data['title'][:50]}")
+except requests.exceptions.Timeout:
+    print("Request timed out.")
+except requests.exceptions.HTTPError as e:
+    print(f"HTTP error: {e}")
+except requests.exceptions.ConnectionError:
+    print("Could not connect.")
+
+# Fetching a list
+url2   = "https://jsonplaceholder.typicode.com/users"
+try:
+    r     = requests.get(url2, timeout=10)
+    r.raise_for_status()
+    users = r.json()
+    print(f"\nFetched {len(users)} users:")
+    for user in users[:3]:
+        print(f"  {user['name']:<20} {user['email']}")
+except requests.exceptions.RequestException as e:
+    print(f"Request failed: {e}")
+
+# Chapter 14 – Complete API data pipeline
+import requests
+import json
+import csv
+
+def fetch_data(url, params=None, timeout=10):
+    """Fetch JSON data from a URL. Returns parsed dict or None on error."""
+    try:
+        r = requests.get(url, params=params, timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.Timeout:
+        print(f"Timeout fetching {url}")
+    except requests.exceptions.HTTPError as e:
+        print(f"HTTP error: {e}")
+    except requests.exceptions.ConnectionError:
+        print("Network unavailable.")
+    return None
+
+def process_posts(posts):
+    """Extract summary info from a list of post dicts."""
+    summaries = []
+    for post in posts:
+        summaries.append({
+            "id":         post["id"],
+            "user_id":    post["userId"],
+            "title":      post["title"][:50],
+            "body_words": len(post["body"].split()),
+        })
+    return summaries
+
+def save_json(data, filename):
+    with open(filename, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"Saved JSON: {filename}")
+
+def save_csv(records, filename):
+    if not records:
+        return
+    with open(filename, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=records[0].keys())
+        writer.writeheader()
+        writer.writerows(records)
+    print(f"Saved CSV: {filename} ({len(records)} rows)")
+
+def run_pipeline():
+    print("Starting data pipeline...")
+    raw = fetch_data("https://jsonplaceholder.typicode.com/posts")
+    if raw is None:
+        print("Pipeline aborted: no data.")
+        return
+    print(f"Fetched {len(raw)} raw records.")
+    processed = process_posts(raw)
+    by_user   = {}
+    for item in processed:
+        uid = item["user_id"]
+        if uid not in by_user:
+            by_user[uid] = []
+        by_user[uid].append(item)
+    summary = [
+        {"user_id": uid, "post_count": len(posts),
+         "avg_words": round(sum(p["body_words"] for p in posts)/len(posts), 1)}
+        for uid, posts in sorted(by_user.items())
+    ]
+    save_json(processed, "posts_processed.json")
+    save_csv(summary,   "users_summary.csv")
+    print(f"Pipeline complete. Total posts: {len(processed)}, Unique users: {len(summary)}")
+
+if __name__ == "__main__":
+    run_pipeline()
+
+# Chapter 14 – JSON parsing and generation
+import json
+
+weather_json = '''
+{
+  "city": "London",
+  "country": "GB",
+  "coordinates": {"lat": 51.5074, "lon": -0.1278},
+  "current": {
+    "temp_c": 14.2,
+    "feels_like_c": 11.8,
+    "humidity": 72,
+    "description": "Partly cloudy",
+    "wind_speed_kmh": 18.5
+  },
+  "forecast": [
+    {"date": "2026-03-16", "high": 15, "low": 9, "rain_chance": 20},
+    {"date": "2026-03-17", "high": 12, "low": 7, "rain_chance": 65},
+    {"date": "2026-03-18", "high": 11, "low": 6, "rain_chance": 80}
+  ],
+  "alerts": []
+}
+'''
+
+data = json.loads(weather_json)
+print(f"Weather for {data['city']}, {data['country']}")
+print(f"Current: {data['current']['temp_c']}C, {data['current']['description']}")
+print("\n3-Day Forecast:")
+for day in data["forecast"]:
+    print(f"  {day['date']}: {day['high']}C / {day['low']}C  Rain: {day['rain_chance']}%")
+
+# Generating JSON
+report = {
+    "title": "Sales Report",
+    "totals": {"revenue": 125430.50, "units": 847},
+    "active": True,
+    "notes": None
+}
+pretty = json.dumps(report, indent=2, sort_keys=True)
+print(pretty)
+
+# Reading and writing JSON files
+with open("config.json", "w") as f:
+    json.dump({"version": "1.0", "debug": False, "timeout": 30}, f, indent=2)
+with open("config.json", "r") as f:
+    loaded = json.load(f)
+print(loaded)
+
+# Chapter 14 – Pandas basics (install: pip install pandas)
+import pandas as pd
+
+data = {
+    "name":       ["Alice", "Bob", "Carlos", "Diana", "Eve"],
+    "department": ["Eng",   "Mktg", "Eng",   "HR",   "Eng"],
+    "salary":     [75000,   55000,  82000,   60000,  91000],
+    "years":      [5,       3,      8,       4,      10],
+    "rating":     [4.2,     3.8,    4.7,     4.0,    4.9]
+}
+df = pd.DataFrame(data)
+print(df)
+print()
+print(df.dtypes)
+print()
+print(df.describe())
+print()
+print(df["department"].value_counts())
+
+eng      = df[df["department"] == "Eng"]
+high_pay = df[df["salary"] > 70000]
+eng_high = df[(df["department"] == "Eng") & (df["salary"] > 70000)]
+print("\nEngineering with salary > 70k:")
+print(eng_high[["name", "salary"]])
+
+grouped = df.groupby("department")["salary"].agg(["mean","min","max","count"]).round(0)
+print("\nGroupBy department:")
+print(grouped)
