@@ -1,0 +1,106 @@
+# Chapter 4 – Grade calculator
+score = 83
+if score < 0 or score > 100:
+    grade   = "Invalid"
+    message = "Score must be between 0 and 100."
+elif score >= 90:
+    grade   = "A"
+    message = "Excellent work."
+elif score >= 80:
+    grade   = "B"
+    message = "Good work."
+elif score >= 70:
+    grade   = "C"
+    message = "Satisfactory."
+elif score >= 60:
+    grade   = "D"
+    message = "Below average. Improvement needed."
+else:
+    grade   = "F"
+    message = "Failed. Please see the instructor."
+
+print(f"Score: {score} | Grade: {grade} | {message}")
+
+# Chapter 4 – if / else / elif
+temperature = 38
+if temperature > 37:
+    print("You have a fever.")
+    print("You should see a doctor.")
+print("Health check complete.")
+
+temperature = 36
+if temperature > 37:
+    print("You have a fever.")
+else:
+    print("Your temperature is normal.")
+
+score = 75
+if score >= 90:
+    print("Grade: A")
+elif score >= 80:
+    print("Grade: B")
+elif score >= 70:
+    print("Grade: C")
+elif score >= 60:
+    print("Grade: D")
+else:
+    print("Grade: F")
+
+# Chapter 4 – Logical operators: and, or, not
+username = "alice"
+password = "secret123"
+if username == "alice" and password == "secret123":
+    print("Login successful.")
+else:
+    print("Invalid username or password.")
+
+day = "Saturday"
+if day == "Saturday" or day == "Sunday":
+    print("It is the weekend.")
+else:
+    print("It is a weekday.")
+
+is_admin = False
+if not is_admin:
+    print("Access denied. Administrator privileges required.")
+
+age          = 22
+is_student   = True
+has_discount = False
+if (is_student or has_discount) and age < 26:
+    print("Discount applies.")
+else:
+    print("Full price applies.")
+
+# Chapter 4 – Ternary expression and practical patterns
+age    = 20
+status = "adult" if age >= 18 else "minor"
+print(status)
+
+temperature = 30
+print(f"It is {'hot' if temperature > 25 else 'cool'} today.")
+
+# Check membership with 'in'
+color = "green"
+if color in ("red", "green", "blue"):
+    print("Primary color of light")
+
+# pass placeholder
+user_level = 3
+if user_level == 1:
+    pass
+elif user_level == 2:
+    print("Standard user.")
+else:
+    print("Administrator.")
+
+# Chapter 4 – Truthy and falsy values
+name  = "Alice"
+empty = ""
+print(bool(name))
+print(bool(empty))
+print(bool(0))
+print(bool(42))
+print(bool(None))
+print(bool([]))
+print(bool([1, 2]))
