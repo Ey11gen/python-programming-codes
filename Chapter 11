@@ -1,0 +1,138 @@
+# Chapter 11 – Importing modules
+import math
+print(math.sqrt(144))
+print(math.pi)
+print(math.floor(9.7))
+print(math.ceil(9.2))
+print(math.factorial(6))
+print(math.pow(2, 10))
+print(math.log(1000, 10))
+print(math.gcd(48, 36))
+
+from math import sqrt, pi
+print(sqrt(81))
+print(pi)
+
+import datetime as dt
+today = dt.date.today()
+print(today)
+print(today.strftime("%A %d %B %Y"))
+
+birth  = dt.date(1995, 6, 20)
+delta  = today - birth
+print(f"Days alive: {delta.days}")
+print(f"Years approx: {delta.days // 365}")
+
+# Chapter 11 – itertools module
+import itertools
+
+for combo in itertools.combinations(["A","B","C","D"], 2):
+    print(combo, end="  ")
+print()
+
+for perm in itertools.permutations([1, 2, 3]):
+    print(perm, end="  ")
+print()
+
+data   = ["apple","avocado","banana","blueberry","cherry"]
+groups = itertools.groupby(data, key=lambda x: x[0])
+for letter, items in groups:
+    print(f"{letter}: {list(items)}")
+
+# Chapter 11 – pathlib module
+from pathlib import Path
+
+cwd  = Path.cwd()
+home = Path.home()
+print(f"CWD:  {cwd}")
+print(f"Home: {home}")
+
+project = Path("pathlib_demo")
+project.mkdir(exist_ok=True)
+
+log_file = project / "app.log"
+log_file.write_text("Started.\nProcessing...\nDone.\n")
+
+content = log_file.read_text()
+print(content)
+print(f"Exists: {log_file.exists()}")
+print(f"Size:   {log_file.stat().st_size} bytes")
+print(f"Suffix: {log_file.suffix}")
+print(f"Stem:   {log_file.stem}")
+
+for f in project.iterdir():
+    print(f"  {f.name}")
+
+for py_file in Path(".").glob("*.py"):
+    print(f"  {py_file.name}  {py_file.stat().st_size} bytes")
+
+# Chapter 11 – Standard library modules
+import os
+import random
+from collections import Counter, defaultdict
+import json
+import sys
+
+# os module
+print(os.getcwd())
+print(os.path.expanduser("~"))
+
+# random module
+print(random.randint(1, 100))
+print(random.random())
+fruits = ["apple", "banana", "cherry", "mango", "kiwi"]
+print(random.choice(fruits))
+print(random.sample(fruits, 3))
+
+# Counter
+text  = "the cat sat on the mat the cat was fat"
+freq  = Counter(text.split())
+print(freq.most_common(3))
+
+# defaultdict
+students = [("Alice","Math"),("Bob","Science"),("Carlos","Math"),("Diana","Science")]
+by_subj  = defaultdict(list)
+for name, subject in students:
+    by_subj[subject].append(name)
+for subject, names in by_subj.items():
+    print(f"{subject}: {names}")
+
+# json
+data = {"name": "Alice", "age": 30, "active": True, "score": None}
+json_string = json.dumps(data, indent=2)
+print(json_string)
+restored = json.loads(json_string)
+print(restored["name"])
+
+# sys
+print(f"Python version: {sys.version}")
+print(f"Platform: {sys.platform}")
+
+# Chapter 11 – A reusable module (import from main_example.py)
+
+def word_count(text):
+    """Return the number of words in the given text."""
+    return len(text.split())
+
+def char_frequency(text):
+    """Return a dict mapping each char to its frequency."""
+    freq = {}
+    for ch in text.lower():
+        if ch.isalpha():
+            freq[ch] = freq.get(ch, 0) + 1
+    return freq
+
+def is_pangram(text):
+    """Return True if text contains every letter of the alphabet."""
+    letters = set(ch for ch in text.lower() if ch.isalpha())
+    return len(letters) == 26
+
+COMMON_WORDS = {"the","a","an","is","it","in","of","to"}
+
+if __name__ == "__main__":
+    sentence = "The quick brown fox jumps over the lazy dog"
+    print(f"Word count:  {word_count(sentence)}")
+    print(f"Is pangram:  {is_pangram(sentence)}")
+    freq = char_frequency(sentence)
+    top  = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:5]
+    print(f"Top 5 chars: {top}")
