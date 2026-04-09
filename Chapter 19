@@ -1,0 +1,167 @@
+# Chapter 19 – Closures and higher-order functions
+def make_multiplier(factor):
+    def multiplier(x):
+        return x * factor
+    return multiplier
+
+double  = make_multiplier(2)
+triple  = make_multiplier(3)
+times10 = make_multiplier(10)
+print(double(7))
+print(triple(7))
+print(times10(7))
+
+pipeline = [double, triple, times10]
+value    = 5
+for transform in pipeline:
+    value = transform(value)
+    print(f"After {transform.__name__}: {value}")
+
+def make_counter(start=0, step=1):
+    count = [start]
+    def counter():
+        value    = count[0]
+        count[0] += step
+        return value
+    return counter
+
+c1 = make_counter(0, 1)
+c2 = make_counter(100, 10)
+print(c1(), c1(), c1())
+print(c2(), c2(), c2())
+
+# Chapter 19 – Decorators
+import time
+import functools
+
+def timer(func):
+    """Decorator that measures and prints execution time."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start  = time.perf_counter()
+        result = func(*args, **kwargs)
+        end    = time.perf_counter()
+        print(f"{func.__name__} took {(end-start)*1000:.2f}ms")
+        return result
+    return wrapper
+
+@timer
+def compute_sum(n):
+    """Sum all integers from 1 to n."""
+    return sum(range(n + 1))
+
+print(compute_sum(1_000_000))
+
+# lru_cache decorator
+@functools.lru_cache(maxsize=None)
+def fib_cached(n):
+    """Fibonacci using memoization via lru_cache."""
+    if n <= 1:
+        return n
+    return fib_cached(n - 1) + fib_cached(n - 2)
+
+print(fib_cached(50))
+print(fib_cached.cache_info())
+
+# Chapter 19 – Functional data transformation pipeline
+data = [
+    {"name":"Alice",  "scores":[90,85,92,88],"dept":"Eng"},
+    {"name":"Bob",    "scores":[72,68,75,70],"dept":"Mktg"},
+    {"name":"Carlos", "scores":[95,98,91,97],"dept":"Eng"},
+    {"name":"Diana",  "scores":[80,82,79,84],"dept":"HR"},
+    {"name":"Eve",    "scores":[60,55,63,58],"dept":"Mktg"},
+]
+
+averages  = {p["name"]: sum(p["scores"]) / len(p["scores"]) for p in data}
+passing   = {name: avg for name, avg in averages.items() if avg >= 70}
+ranked    = sorted(passing.items(), key=lambda x: x[1], reverse=True)
+total_avg = sum(averages.values()) / len(averages)
+above_avg = [name for name, avg in averages.items() if avg > total_avg]
+
+print(f"Averages:  {averages}")
+print(f"Top 3:     {dict(ranked[:3])}")
+print(f"Above class avg ({total_avg:.1f}): {above_avg}")
+
+# Chapter 19 – Generators and lazy evaluation
+def count_up(start, stop, step=1):
+    """A generator that yields numbers from start to stop."""
+    current = start
+    while current <= stop:
+        yield current
+        current += step
+
+gen = count_up(1, 10, 2)
+print(next(gen))
+print(next(gen))
+print(next(gen))
+
+for n in count_up(0, 20, 5):
+    print(n, end=" ")
+print()
+
+def fibonacci():
+    """Yield Fibonacci numbers indefinitely."""
+    a, b = 0, 1
+    while True:
+        yield a
+        a, b = b, a + b
+
+def take(n, iterable):
+    """Take the first n items from any iterable."""
+    count = 0
+    for item in iterable:
+        if count >= n:
+            return
+        yield item
+        count += 1
+
+fib_gen   = fibonacci()
+first_15  = list(take(15, fib_gen))
+print(first_15)
+
+# Generator pipeline
+def pipeline_squares_of_evens(limit):
+    numbers = (n for n in range(limit))
+    evens   = (n for n in numbers if n % 2 == 0)
+    squares = (n ** 2 for n in evens)
+    return squares
+
+print(list(pipeline_squares_of_evens(10)))
+
+# Chapter 19 – Lambda, map, filter, reduce
+from functools import reduce
+
+double  = lambda x: x * 2
+add     = lambda x, y: x + y
+is_even = lambda n: n % 2 == 0
+clamp   = lambda x, lo, hi: max(lo, min(hi, x))
+
+print(double(7))
+print(add(4, 9))
+print(is_even(6))
+print(clamp(105, 0, 100))
+
+students = [
+    {"name":"Alice",  "grade":91,"age":20},
+    {"name":"Bob",    "grade":78,"age":22},
+    {"name":"Carlos", "grade":85,"age":19},
+    {"name":"Diana",  "grade":95,"age":21},
+]
+by_grade = sorted(students, key=lambda s: s["grade"], reverse=True)
+for s in by_grade:
+    print(f"{s['name']:<10} {s['grade']}")
+
+numbers  = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+squares  = list(map(lambda n: n ** 2, numbers))
+print(squares)
+
+words     = ["  hello  ", " WORLD ", "  python  "]
+cleaned   = list(map(str.strip, words))
+print(list(map(str.lower, cleaned)))
+
+evens    = list(filter(lambda n: n % 2 == 0, range(1, 21)))
+print(evens)
+
+total   = reduce(lambda acc, n: acc + n, numbers)
+product = reduce(lambda acc, n: acc * n, numbers)
+print(f"Sum: {total}, Product: {product}")
